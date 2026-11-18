@@ -392,7 +392,7 @@ function askDialog(html, withInput, def) {
     $('#dlgYes').onclick = () => done(true); $('#dlgNo').onclick = () => done(false);
   });
 }
-const askConfirm = msg => askDialog(esc(msg));
+const askConfirm = msg => askDialog(esc(msg).replace(/\n/g, '<br>'));
 const askText = (title, def) => askDialog(esc(title), true, def);
 function stars(r) { return '<span class="stars">' + '★'.repeat(r) + '</span>'; }
 function wbadge(w) { return `<span class="badge w-${w}">${WATER[w].icon} ${WATER[w].name}</span>`; }
@@ -696,7 +696,7 @@ function startVisit(snap, record) {
   save();
   const el = $('#visit'); el.classList.remove('hidden'); document.body.style.overflow = 'hidden';
   const fishN = tanks.reduce((a, t) => a + t.fish.length, 0), shN = tanks.reduce((a, t) => a + t.fish.filter(f => f.h).length, 0);
-  el.innerHTML = `<div class="visit-head"><span style="font-size:24px">🎫</span><div><div class="t">${esc(snap.name)}</div><div class="muted">${esc(snap.id)} ・ Rank ${snap.rank} ${esc(rankTitle(snap.rank))} ・ 図鑑${snap.dex}種 ・ 魚${fishN}匹${shN ? ` ・ ✨色違い${shN}匹` : ''}</div></div><span class="spacer"></span><button class="btn primary" id="leaveVisit">🏠 自分の水族館に帰る</button></div>
+  el.innerHTML = `<div class="visit-head"><span style="font-size:24px">🎫</span><div><div class="t">${esc(snap.name)}</div><div class="muted">${esc(snap.id)} ・ Rank ${snap.rank} ${esc(rankTitle(snap.rank))} ・ 図鑑${snap.dex}種 ・ 魚${fishN}匹${shN ? ` ・ ✨色違い${shN}匹` : ''}</div></div><span class="spacer"></span>${isMe ? '' : '<button class="btn small" id="restoreVisit" title="データが消えたときの救済用">🛟 これは自分の水族館（復元する）</button>'}<button class="btn primary" id="leaveVisit">🏠 自分の水族館に帰る</button></div>
     <main>
       ${isMe ? '<div class="hint">これはあなた自身の水族館の見学コードです（プレビュー）。</div>' : ''}
       ${newSeen ? `<div class="hint">👀 図鑑に新しい魚が${newSeen}種「発見」として記録されました！</div>` : ''}
@@ -706,6 +706,14 @@ function startVisit(snap, record) {
         <div class="row" style="margin-top:8px"><button class="btn green" id="mkStamp">スタンプを作る</button></div><div id="stampOut"></div></div>`}
     </main>`;
   $$('[data-vt]', el).forEach(cv => new TankView(cv, tanks[+cv.dataset.vt]));
+  const rv = $('#restoreVisit', el);
+  if (rv) rv.onclick = async () => {
+    if (!await askConfirm(`データが消えてしまった場合の救済機能です。\n「${snap.name}」があなた自身の水族館なら、この内容で復元できます（コイン残高・来訪者ノートなどは戻りません）。\n今のデータは上書きされます。復元しますか？`)) return;
+    const res = restoreFromSnapshot(snap);
+    el.classList.add('hidden'); el.innerHTML = ''; document.body.style.overflow = '';
+    toast(`🛟 「${esc(S.name)}」を復元しました！ブース${res.tanks}つ・魚${res.fish}匹`, 'good', 6000);
+    setView('aquarium');
+  };
   $('#leaveVisit', el).onclick = () => { el.classList.add('hidden'); el.innerHTML = ''; document.body.style.overflow = ''; if (currentView === 'friend') renderFriend(); };
   const ms = $('#mkStamp', el);
   if (ms) ms.onclick = async () => {
@@ -774,6 +782,9 @@ function renderSettings() {
     <div class="row"><button class="btn blue" id="bkOut">バックアップコードを作る</button></div><div id="bkBox"></div>
     <textarea id="bkIn" placeholder="AQB…（バックアップコードを貼り付けて復元）" style="margin-top:8px"></textarea>
     <div class="row" style="margin-top:6px"><button class="btn" id="bkLoad">復元する</button><span class="spacer"></span><button class="btn primary" id="reset">🗑️ 最初からやり直す</button></div>
+    <h3>🛟 見学リンクから復元</h3><p class="muted">データが消えてしまったときの救済用です。以前に作った<b>自分の水族館の見学リンク（またはコード）</b>を貼ると、ブース・魚（色違い・オスメス）・飾り・館名・フレンドコード・ランクが戻ります。<br>コインの残高・図鑑の「発見」記録・来訪者ノートなどは戻りません。</p>
+    <textarea id="vrIn" placeholder="https://…#v=AQV… または AQV…"></textarea>
+    <div class="row" style="margin-top:6px"><button class="btn gold" id="vrLoad">この見学リンクから復元する</button></div>
   </div>
   <div class="panel"><h2>📊 記録</h2><dl class="kv">
     <dt>開館日</dt><dd>${new Date(S.created).toLocaleDateString('ja-JP')}</dd>
@@ -792,7 +803,52 @@ function renderSettings() {
   $('#sRename', el).onclick = renameAquarium;
   $('#bkOut', el).onclick = async () => { save(); const code = await encodeCode('B', S); $('#bkBox').innerHTML = `<textarea readonly style="margin-top:8px">${esc(code)}</textarea><div class="row" style="margin-top:6px"><button class="btn small" id="cpB">コピー</button></div>`; $('#cpB').onclick = () => copyText(code); };
   $('#bkLoad', el).onclick = async () => { try { const r = await decodeCode($('#bkIn').value, 'B'); if (!r.data.tanks) throw new Error('データが不完全です'); if (!await askConfirm('今のデータを上書きして復元しますか？')) return; store.set(JSON.stringify(r.data)); location.reload(); } catch (e) { toast('😢 ' + esc(e.message), 'bad', 4000); } };
+  $('#vrLoad', el).onclick = async () => {
+    try {
+      const r = await decodeCode($('#vrIn').value, 'V');
+      const snap = r.data; if (!snap || !snap.tanks || !snap.tanks.length) throw new Error('見学データにブースが入っていません');
+      const fishN = snap.tanks.reduce((a, t) => a + t[2].length, 0);
+      const when = snap.t ? new Date(snap.t).toLocaleString('ja-JP') : '不明';
+      if (!await askConfirm(`「${snap.name}」（${snap.id}・Rank${snap.rank}）を復元します。\nブース${snap.tanks.length}つ・魚${fishN}匹（${when}時点）\n今のデータは上書きされます。よろしいですか？`)) return;
+      const res = restoreFromSnapshot(snap);
+      toast(`🛟 「${esc(S.name)}」を復元しました！ブース${res.tanks}つ・魚${res.fish}匹` + (res.box ? `<br>（水質が合わない${res.box}匹は待機BOXへ）` : ''), 'good', 6000);
+      setView('aquarium');
+    } catch (e) { toast('😢 ' + esc(e.message), 'bad', 4000); }
+  };
   $('#reset', el).onclick = async () => { if (!await askConfirm('本当に最初からやり直しますか？（元に戻せません）')) return; store.del(); S = null; location.hash = ''; location.reload(); };
+}
+
+
+// ---------- 見学スナップショットからの復元 ----------
+function restoreFromSnapshot(snap) {
+  const st = newState();
+  st.id = /^AQ-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(snap.id) ? snap.id : st.id;
+  st.name = String(snap.name || st.name).slice(0, 20);
+  st.rank = Math.max(1, Math.min(99, snap.rank | 0)); st.exp = 0;
+  st.coins = 500 + 300 * st.rank; st.tutorial = 0; st.tanks = []; st.dex = {}; st.inv = {}; st.box = [];
+  const k = snap.res ? 1 : 2; // 高精細化前のコードは座標を2倍に
+  let fishCount = 0;
+  snap.tanks.forEach(([type, name, fish, decos]) => {
+    if (!WATER[type]) type = 'sea';
+    const t = { id: uid(), type, name: String(name || WATER[type].full).slice(0, 20), cap: 12, lv: 1, fish: [], decos: [] };
+    (decos || []).forEach(d => { if (DECOR_MAP[d[0]]) t.decos.push({ id: d[0], x: Math.max(0, Math.min(TANK_W, d[1] * k)), y: Math.max(SAND_Y, Math.min(TANK_H - 1, d[2] * k)), s: (d[3] | 0) % 3 }); });
+    (fish || []).forEach(a => {
+      const sp = SPECIES[a[0]]; if (!sp) return;
+      const f = mkFish(sp.id, a[2] ? 1 : 0, a[1], !!a[3]);
+      const dx = st.dex[sp.id] || (st.dex[sp.id] = {}); dx.seen = 1; dx.own = 1; if (f.h) dx.shiny = 1;
+      fishCount++;
+      if (sp.w === type) t.fish.push(f); else st.box.push(f);
+    });
+    // 入っていた魚が収まるように容量を合わせる
+    const used = t.fish.reduce((a, f) => a + fishWeight(f.s), 0);
+    while (t.cap < used) { t.cap += 6; t.lv++; }
+    st.tanks.push(t);
+  });
+  // 待機BOXの魚を、入るブースがあれば入れる
+  st.box = st.box.filter(f => { const sp = SPECIES_MAP[f.s]; const t = st.tanks.find(t => t.type === sp.w && t.fish.reduce((a, g) => a + fishWeight(g.s), 0) + fishWeight(f.s) <= t.cap); if (t) { t.fish.push(f); return false; } return true; });
+  S = st; S.last = now(); save();
+  refreshShop(true); renderHUD();
+  return { tanks: S.tanks.length, fish: fishCount, box: S.box.length };
 }
 
 // ---------- URLのハッシュ（リンクで開いた時） ----------
