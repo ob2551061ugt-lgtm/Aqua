@@ -98,8 +98,17 @@ const PRE = {
   shark:  { L: 28, H: 8,  tail: 'shark', tl: 9, dor: 4, eb: 1.5, e: 1.6 },
   big:    { L: 24, H: 11, tail: 'fork',  tl: 7, dor: 1 },
   tuna:   { L: 26, H: 9,  tail: 'tuna',  tl: 8, dor: 4, eb: 1.4 },
+  // 海獣・ペンギン（なめらかな体）
+  penguin:  { L: 15, H: 7,  tail: 'stub',      tl: 2, dor: 0, e: 1.8, eb: 1.5, flipper: 1, snout: 1, smooth: 1 },
+  otter:    { L: 18, H: 5,  tail: 'ottertail', tl: 9, dor: 0, wh: true, legs: true, e: 1.6, eb: 1.8, smooth: 1 },
+  dolphin:  { L: 26, H: 8,  tail: 'fluke',     tl: 7, dor: 4, snout: 2, e: 1.6, eb: 1.5, flipper: 1, smooth: 1 },
+  porpoise: { L: 20, H: 7,  tail: 'fluke',     tl: 6, dor: 0, e: 1.8, eb: 1.5, flipper: 1, smooth: 1 },
+  whale:    { L: 26, H: 10, tail: 'fluke',     tl: 7, dor: 0, melon: 1, e: 1.8, eb: 1.5, flipper: 1, smooth: 1 },
+  orca:     { L: 34, H: 11, tail: 'fluke',     tl: 8, dor: 4, e: 1.7, eb: 1.5, flipper: 1, smooth: 1 },
+  seal:     { L: 20, H: 8,  tail: 'seal',      tl: 5, dor: 0, wh: true, e: 1.8, eb: 1.4, flipper: 1, smooth: 1 },
+  manatee:  { L: 26, H: 11, tail: 'paddle',    tl: 7, dor: 0, wh: true, e: 1.6, eb: 1.6, flipper: 1, smooth: 1 },
 };
-const SPECIAL = new Set(['seahorse', 'crab', 'shrimp', 'turtle', 'ray', 'isopod', 'squid', 'dumbo']);
+const SPECIAL = new Set(['seahorse', 'crab', 'shrimp', 'turtle', 'ray', 'isopod', 'squid', 'dumbo', 'seaotter']);
 
 function speciesPal(sp, shiny) {
   const c = sp.c;
@@ -130,7 +139,7 @@ function genFish(sp, pal, frame) {
   const x0 = tl + 1, cx = x0 + L / 2, cy = 1 + lurePad + finUp + humpPad + bodyBand / 2;
   const top = {}, bot = {};
   const finC = pal.f, tailC = pal.t;
-  const fin = (x, y, c) => { if (!g.get(x, y)) g.set(x, y, (P.finRays && x % 2 === 0) ? shade(c, -0.28) : (x % 3 === 0 ? shade(c, -0.09) : c)); };
+  const fin = (x, y, c) => { if (!g.get(x, y)) g.set(x, y, P.smooth ? c : (P.finRays && x % 2 === 0) ? shade(c, -0.28) : (x % 3 === 0 ? shade(c, -0.09) : c)); };
   const wave = x => P.eel ? Math.round(Math.sin(x * 0.42 / D + frame * Math.PI) * 1.2 * D) : 0;
 
   // 体
@@ -141,6 +150,7 @@ function genFish(sp, pal, frame) {
     if (t < -0.55) hh = Math.max(hh, H * (P.eel ? 0.45 : 0.17));
     if (P.eel) hh = Math.max(hh, H * 0.45 * (t > 0.85 ? (1 - t) / 0.15 + 0.3 : 1));
     if (P.hump && t > 0.25 && t < 0.75) hh += 2 * D * Math.sin((t - 0.25) / 0.5 * Math.PI);
+    if (P.melon && t > 0.45) hh += 1.6 * D * Math.sin((t - 0.45) / 0.55 * Math.PI);
     const yc = cy + wave(x);
     let tp = null, bt = null;
     for (let y = Math.floor(yc - hh - 1); y <= Math.ceil(yc + hh); y++) {
@@ -165,8 +175,14 @@ function genFish(sp, pal, frame) {
         case 'fan': { const half = D * 0.6 + tailH / 2 * Math.pow(f, 0.6); on = Math.abs(dy) <= half && !(f > 0.85 && Math.abs(dy) < D * 0.6); break; }
         case 'flow': { const yc2 = yc + f * H * 0.5; const half = D * 0.6 + tailH / 2 * Math.pow(f, 0.5); on = Math.abs((y + 0.5) - yc2) <= half; break; }
         case 'shark': on = (dy <= 0.5 && dy >= -(D * 0.6 + f * tailH * 0.75)) || (f < 0.55 && dy > 0 && dy <= D * 0.6 + f * tailH * 0.5); break;
+        case 'fluke': { const half = f < 0.55 ? Math.max(D * 0.7, H * 0.16 * (1 - f)) : D * 0.7 + (f - 0.55) / 0.45 * H * 0.34; on = Math.abs(dy) <= half; break; }
+        case 'seal': { const half = D * 0.6 + f * H * 0.42; on = Math.abs(dy) <= half && !(f > 0.45 && Math.abs(dy) < (f - 0.45) * H * 0.55); break; }
+        case 'paddle': { const half = H * 0.15 + H * 0.27 * Math.sqrt(f); on = Math.abs(dy) <= half * (f > 0.75 ? Math.sqrt(Math.max(0, 1 - (f - 0.75) / 0.25 * 0.85)) : 1); break; }
+        case 'ottertail': { const half = H * 0.32 * (1 - f * 0.8) + 0.4; on = Math.abs(dy - f * H * 0.15) <= half; break; }
+        case 'stub': { const half = D * 0.6 + f * H * 0.15; on = Math.abs(dy) <= half; break; }
         case 'tuna': { const half = f < 0.35 ? D * 0.6 : D * 0.6 + (f - 0.35) / 0.65 * tailH / 2; on = Math.abs(dy) <= half && !(f > 0.6 && Math.abs(dy) < (f - 0.6) * tailH * 0.9); break; }
       }
+      if (on && P.tail === 'ottertail') { if (!g.get(x, y)) g.set(x, y, Math.abs(dy) < 1 ? pal.b : shade(pal.b, dy < 0 ? 0.08 : -0.08)); continue; }
       if (on) fin(x, y, (P.tailBars && dx > tl * 0.3 && Math.abs(dy) > D * 0.4 && (Math.floor(dx / D) % 3) === 0) ? P.tailBars : tailC);
     }
   }
@@ -210,10 +226,15 @@ function genFish(sp, pal, frame) {
   }
   // 胸びれ
   const px = Math.round(cx + L / 2 * 0.22), py = Math.round(cy + H * 0.1);
-  if (!P.eel && L >= 8 * D) for (let k = 0; k <= 2 * D; k++) for (let j = 0; j <= Math.floor(k * 0.55); j++) g.set(px - k, py + j, shade(finC, k === 2 * D || j === Math.floor(k * 0.55) ? -0.2 : -0.05));
+  if (P.flipper) {
+    const len = Math.round(H * 0.55) + D, fc = shade(pal.b, -0.14);
+    for (let k = 0; k <= len; k++) disk(g, px - k * 0.55, py + k * 0.7, Math.max(0.7, D * 0.95 * (1 - k / len) + 0.5), fc);
+  } else if (!P.eel && L >= 8 * D) for (let k = 0; k <= 2 * D; k++) for (let j = 0; j <= Math.floor(k * 0.55); j++) g.set(px - k, py + j, shade(finC, k === 2 * D || j === Math.floor(k * 0.55) ? -0.2 : -0.05));
   // 口先
   const xf = x0 + L;
-  if (P.snout) for (let i = 0; i < P.snout * D; i++) { g.set(xf + i, Math.round(cy - D), pal.b); g.set(xf + i, Math.round(cy - D) + 1, shade(pal.b, -0.1)); }
+  if (P.snout) { const sc = P.beak || pal.b; for (let i = 0; i < P.snout * D; i++) { g.set(xf + i, Math.round(cy - D), sc); g.set(xf + i, Math.round(cy - D) + 1, shade(sc, -0.1)); } }
+  if (P.tusks) for (let i = 0; i < 3 * D; i++) { g.set(xf - 2 * D, Math.round(cy + H * 0.25) + i, '#f4f0e0'); g.set(xf - 2 * D + 1, Math.round(cy + H * 0.25) + i, '#e0dcc8'); }
+  if (P.feet) for (let i = 0; i < D + 1; i++) { const fx = x0 + 1 + i; if (bot[fx + 2] !== undefined) { g.set(fx, bot[fx + 2], P.feet); g.set(fx - 1, bot[fx + 2] + 1, P.feet); } }
   g.set(xf - 1, Math.round(cy + H * 0.08), shade(pal.b, -0.45));
   if (P.teeth) { for (const k of [1, 3, 5]) { g.set(xf - k, Math.round(cy + D), '#ffffff'); g.set(xf - k, Math.round(cy + D) + 1, '#ffffff'); } }
   if (P.wh) {
@@ -240,6 +261,7 @@ function genFish(sp, pal, frame) {
     disk(g, ex, ey, r, eyeC);
     if (r >= 1.2) g.set(Math.floor(ex - 0.5), Math.floor(ey - 0.6), '#ffffff');
   }
+  if (P.crest) for (let i = 0; i <= 2 * D; i++) { g.set(Math.round(ex) - i, Math.round(ey) - 2 - Math.floor(i / 2), P.crest); g.set(Math.round(ex) - i, Math.round(ey) - 3 - Math.floor(i / 2), P.crest); }
   // ちょうちん
   if (P.lure) {
     const lx = exi - D; const ly = top[lx] !== undefined ? top[lx] : Math.round(cy - H / 2);
@@ -405,6 +427,17 @@ function genSpecial(sp, pal, frame) {
       g.noOutline.add('#6af8ff');
       return g;
     }
+    case 'seaotter': {
+      const g = mapGrid([
+        'fff...................',
+        '.ff...............lll.',
+        '..bbbbbbbbbbbb..lllllll',
+        '.bbbbbbbbbbssbblllleleln',
+        '.bbbbbbbbbbssbbllllllll.',
+        '..bbbbbbbbbbbbbbbbbbbb..',
+        frame ? '...bbbbbbbbbbbbbbbbb....' : '....bbbbbbbbbbbbbbbb....'], { b, l, f: shade(b, -0.2), s: '#f0d8b0', e, n: '#2a2020' });
+      return g;
+    }
     case 'dumbo': {
       const g = mapGrid(frame ? [
         '.ff........ff.',
@@ -539,6 +572,63 @@ function epx(g) {
   return n;
 }
 
+// ---- 陸に上がったときの姿（ペンギン・カワウソ） ----
+function genStand(sp, pal, frame) {
+  const o = sp.o;
+  if (o.stand === 'penguin') {
+    const rows = [
+      '....bbbb....',
+      '...bbbbbb...',
+      '...bbbbbebkk',
+      '...bbbbbbbk.',
+      '...bbbbbnnl.',
+      '...bbbbnllll',
+      '..bbbbblllll',
+      '..bbbbllllll',
+      '.bbbbbllllll',
+      '.bbbbbllllll',
+      '..bbbbllllll',
+      '...bbbllllll',
+      '...bbblllll.',
+      '....bbllll..',
+      frame ? '....ff..ff..' : '....ff.ff...',
+      frame ? '...fff..fff.' : '...fff.fff..'];
+    if (o.chestBand) rows[7] = '..bbbbbbbbbl';
+    if (o.headPatch) rows[1] = '...bbbllbb..';
+    const g = mapGrid(rows, { b: pal.b, l: pal.l, k: o.beak || '#2a2a2a', e: '#101018', f: o.feet || '#2a2a2a', n: o.neck || pal.l });
+    if (o.crest) { g.set(9, 1, o.crest); g.set(10, 1, o.crest); g.set(11, 2, o.crest); g.set(10, 0, o.crest); }
+    return g;
+  }
+  // カワウソ（立ち上がった姿）
+  return mapGrid([
+    '....bbbb.....',
+    '...bbbbbbb...',
+    '...bbbbbebbk.',
+    '...bbbbblllk.',
+    '....bbbllll..',
+    '....bbbllll..',
+    '...bbbblllb..',
+    '..bbbbbllllb.',
+    '..bbbbbllll..',
+    '..bbbbbllll..',
+    '...bbbbbbbb..',
+    frame ? '...bbb..bbb..' : '...bbbb.bbb..',
+    'bb.bbb..bbb..',
+    '.bbbb........'], { b: pal.b, l: pal.l, k: '#2a2020', e: '#101018' });
+}
+function getStandSprite(spId, shiny, frame, flip) {
+  const key = 'ST' + spId + '|' + (shiny ? 1 : 0) + '|' + (frame ? 1 : 0) + (flip ? 'F' : '');
+  let c = SPRITE_CACHE.get(key); if (c) return c;
+  if (flip) { c = flipCanvas(getStandSprite(spId, shiny, frame, false)); SPRITE_CACHE.set(key, c); return c; }
+  const sp = SPECIES_MAP[spId]; let g = genStand(sp, speciesPal(sp, shiny), frame);
+  if (sp.o.standS) g = scaleGrid(g, sp.o.standS);
+  c = epx(g).toCanvas(); SPRITE_CACHE.set(key, c); return c;
+}
+function flipCanvas(s) {
+  const c = document.createElement('canvas'); c.width = s.width; c.height = s.height;
+  const x = c.getContext('2d'); x.translate(s.width, 0); x.scale(-1, 1); x.drawImage(s, 0, 0); return c;
+}
+
 // ---- 公開API ----
 const SPRITE_CACHE = new Map();
 function scaleGrid(g, s) {
@@ -661,6 +751,12 @@ function genDecor(d, frame, seed) {
       return g;
     }
     case 'spawnmat': { const g = new Grid(14, 4); for (let x = 0; x < 14; x++) for (let y = 0; y < 4; y++) g.set(x, y, (x + y) % 2 ? '#3a8a3a' : '#5ab84a'); return g; }
+    case 'ice': {
+      const W = 22, H = 10, g = new Grid(W, H);
+      for (let x = 0; x < W; x++) { const t = (x + 0.5) / W * 2 - 1; const h = Math.round(H * Math.pow(1 - Math.abs(t), 0.35) * (0.75 + 0.25 * vnoise(x / 2, 1, seed))); for (let y = H - h; y < H; y++) g.set(x, y, y === H - h ? '#ffffff' : (x + y) % 5 === 0 ? '#a8d8f0' : (x < W / 2 ? '#e0f4ff' : '#c8e8f8')); }
+      return g;
+    }
+    case 'ball': return mapGrid(['..rrww..', '.rrrwwy.', 'rrrrwwyy', 'bbbbwwyy', 'bbbbwwyy', '.bbbwwy.', '..bbww..'], { r: '#ff4a4a', w: '#ffffff', y: '#ffd83a', b: '#3a8aff' });
     case 'lamp': { const g = mapGrid(['..yy..', '.yYYy.', '.yYYy.', '..yy..', '..kk..', '..kk..', '.kkkk.', 'kkkkkk'], { y: '#ffe88a', Y: '#fff38a', k: '#4a4a5a' }); g.noOutline.add('#fff38a'); return g; }
   }
   return new Grid(4, 4);
@@ -681,32 +777,59 @@ function decorURL(id) {
 
 // ---- 水槽の背景 ----
 const TANK_W = 360, TANK_H = 152, SAND_Y = 128;
-function getTankBG(type) {
-  const key = 'BG' + type; let c = SPRITE_CACHE.get(key); if (c) return c;
-  const wt = WATER[type]; c = document.createElement('canvas'); c.width = TANK_W; c.height = TANK_H;
+function tankDims(type, big) {
+  const W = big ? 720 : 360, H = big ? 200 : 152, SY = H - 24;
+  const WY = WATER[type] && WATER[type].air ? Math.round(H * 0.33) : 0;
+  return { W, H, SY, WY, landW: WY ? Math.round(W * (big ? 0.22 : 0.3)) : 0, landY: WY ? WY - 5 : 0 };
+}
+function getTankBG(type, big) {
+  const key = 'BG' + type + (big ? 'B' : ''); let c = SPRITE_CACHE.get(key); if (c) return c;
+  const wt = WATER[type], d = tankDims(type, big);
+  c = document.createElement('canvas'); c.width = d.W; c.height = d.H;
   const x = c.getContext('2d');
+  // 水面より上（プール）
+  if (d.WY) {
+    for (let y = 0; y < d.WY; y++) { const t = y / d.WY; x.fillStyle = rgb2hex(236 - t * 20, 246 - t * 12, 252 - t * 6); x.fillRect(0, y, d.W, 1); }
+    x.fillStyle = 'rgba(120,150,170,0.18)';
+    for (let y = 8; y < d.WY - 4; y += 12) x.fillRect(0, y, d.W, 1);
+    for (let y = 8, r = 0; y < d.WY - 4; y += 12, r++) for (let xx = (r % 2) * 12; xx < d.W; xx += 24) x.fillRect(xx, y, 1, 12);
+  }
   const [r1, g1, b1] = hex2rgb(wt.top), [r2, g2, b2] = hex2rgb(wt.bot);
-  const bands = 16;
-  for (let i = 0; i < bands; i++) { const t = i / (bands - 1); x.fillStyle = rgb2hex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t); x.fillRect(0, Math.floor(i * SAND_Y / bands), TANK_W, Math.ceil(SAND_Y / bands) + 1); }
+  const bands = 16, y0 = d.WY, span = d.SY - y0;
+  for (let i = 0; i < bands; i++) { const t = i / (bands - 1); x.fillStyle = rgb2hex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t); x.fillRect(0, y0 + Math.floor(i * span / bands), d.W, Math.ceil(span / bands) + 1); }
   // 光の筋
   x.fillStyle = `rgba(255,255,255,${wt.ray})`;
-  for (let k = 0; k < 4; k++) { const ox = 40 + k * 124; for (let y = 0; y < SAND_Y; y++) x.fillRect(ox + y * 0.55 | 0, y, 20 + (k % 2) * 16, 1); }
+  for (let k = 0; k < Math.round(d.W / 90); k++) { const ox = 40 + k * 124; for (let y = y0; y < d.SY; y++) x.fillRect(ox + (y - y0) * 0.55 | 0, y, 20 + (k % 2) * 16, 1); }
   // 水面
-  x.fillStyle = 'rgba(255,255,255,0.35)'; x.fillRect(0, 0, TANK_W, 3); x.fillStyle = 'rgba(255,255,255,0.15)'; x.fillRect(0, 3, TANK_W, 2);
+  x.fillStyle = 'rgba(255,255,255,0.45)'; x.fillRect(0, y0, d.W, 3); x.fillStyle = 'rgba(255,255,255,0.18)'; x.fillRect(0, y0 + 3, d.W, 2);
+  if (d.WY) for (let xx = 0; xx < d.W; xx += 2) { const yy = y0 + 1 + Math.round(Math.sin(xx * 0.08) * 1.5); x.fillStyle = 'rgba(255,255,255,0.6)'; x.fillRect(xx, yy, 2, 1); }
   // 底
-  for (let yy = SAND_Y; yy < TANK_H; yy++) for (let xx = 0; xx < TANK_W; xx++) {
-    const n = hash2(xx, yy, 7); let col = yy === SAND_Y ? shade(wt.ground, 0.25) : (n < 0.18 ? wt.ground2 : (n > 0.93 ? shade(wt.ground, 0.3) : wt.ground));
+  for (let yy = d.SY; yy < d.H; yy++) for (let xx = 0; xx < d.W; xx++) {
+    const n = hash2(xx, yy, 7); let col = yy === d.SY ? shade(wt.ground, 0.25) : (n < 0.18 ? wt.ground2 : (n > 0.93 ? shade(wt.ground, 0.3) : wt.ground));
     if (type === 'river' && vnoise(xx / 8, yy / 6, 3) > 0.68) col = n < 0.5 ? '#c8c4b8' : '#8a8478';
     x.fillStyle = col; x.fillRect(xx, yy, 1, 1);
   }
-  if (type === 'jelly') { // ライトアップ
-    const gr = x.createRadialGradient(TANK_W / 2, SAND_Y * 0.45, 10, TANK_W / 2, SAND_Y * 0.45, TANK_W * 0.6); gr.addColorStop(0, 'rgba(120,180,255,0.28)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(0, 0, TANK_W, SAND_Y);
-    for (let i = 0; i < 60; i++) { x.fillStyle = 'rgba(200,230,255,0.25)'; x.fillRect(hash2(i, 5, 4) * TANK_W | 0, hash2(i, 6, 4) * SAND_Y | 0, 1, 1); }
+  // 陸地（プールの岩場）
+  if (d.WY) {
+    for (let xx = 0; xx < d.landW + 6; xx++) {
+      const edge = xx > d.landW - 10 ? (xx - (d.landW - 10)) * 1.3 : 0;
+      const topY = d.landY + Math.round(vnoise(xx / 6, 0, 5) * 2 + edge * 0.3);
+      const botY = d.WY + 14 - Math.round(edge * 1.2) + Math.round(vnoise(xx / 4, 2, 5) * 3);
+      for (let yy = topY; yy <= botY; yy++) {
+        const n = hash2(xx, yy, 11);
+        x.fillStyle = yy === topY ? '#f4f2ec' : yy < topY + 3 ? '#d8d4ca' : (n < 0.2 ? '#9a968c' : yy > d.WY ? '#a8a69c' : '#bcb8ae');
+        x.fillRect(xx, yy, 1, 1);
+      }
+    }
   }
-  if (type === 'deep') { for (let i = 0; i < 90; i++) { x.fillStyle = 'rgba(200,220,255,0.35)'; x.fillRect(hash2(i, 1, 9) * TANK_W | 0, hash2(i, 2, 9) * SAND_Y | 0, 1, 1); } }
-  if (type === 'brackish') { // マングローブの根
+  if (type === 'jelly') {
+    const gr = x.createRadialGradient(d.W / 2, d.SY * 0.45, 10, d.W / 2, d.SY * 0.45, d.W * 0.6); gr.addColorStop(0, 'rgba(120,180,255,0.28)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(0, 0, d.W, d.SY);
+    for (let i = 0; i < 60 * (big ? 2 : 1); i++) { x.fillStyle = 'rgba(200,230,255,0.25)'; x.fillRect(hash2(i, 5, 4) * d.W | 0, hash2(i, 6, 4) * d.SY | 0, 1, 1); }
+  }
+  if (type === 'deep') { for (let i = 0; i < 90 * (big ? 2 : 1); i++) { x.fillStyle = 'rgba(200,220,255,0.35)'; x.fillRect(hash2(i, 1, 9) * d.W | 0, hash2(i, 2, 9) * d.SY | 0, 1, 1); } }
+  if (type === 'brackish') {
     x.fillStyle = 'rgba(60,40,20,0.35)';
-    for (let k = 0; k < 3; k++) { const ox = 60 + k * 160; for (let y = 0; y < 80; y++) { x.fillRect(ox + Math.sin(y * 0.075) * 6 | 0, y, 6, 1); if (y > 40) x.fillRect(ox + (y - 40) | 0, y, 4, 1); } }
+    for (let k = 0; k < Math.round(d.W / 120); k++) { const ox = 60 + k * 160; for (let y = 0; y < 80; y++) { x.fillRect(ox + Math.sin(y * 0.075) * 6 | 0, y, 6, 1); if (y > 40) x.fillRect(ox + (y - 40) | 0, y, 4, 1); } }
   }
   SPRITE_CACHE.set(key, c); return c;
 }

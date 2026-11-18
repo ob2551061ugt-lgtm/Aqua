@@ -10,18 +10,24 @@ const WATER = {
               top: '#58a8f0', bot: '#2463c4', ground: '#f0cf68', ground2: '#c99c3a', ray: 0.13 },
   jelly:    { name: 'クラゲ', full: 'クラゲブース',   icon: '🪼', rank: 3, base: 1200,
               top: '#163a78', bot: '#040c26', ground: '#1c2440', ground2: '#121830', ray: 0.04 },
+  pool:     { name: '海獣', full: '海獣プール',     icon: '🐧', rank: 5, base: 3000,
+              top: '#62c0ec', bot: '#2470b4', ground: '#d8d4c8', ground2: '#aaa496', ray: 0.10, air: true },
   brackish: { name: '汽水',  full: '汽水ブース',     icon: '🌾', rank: 4, base: 1500,
               top: '#86b39a', bot: '#456e5a', ground: '#8f7553', ground2: '#5f4c33', ray: 0.08 },
   deep:     { name: '深海',  full: '深海ブース',     icon: '🌑', rank: 6, base: 4000,
               top: '#1a3266', bot: '#03081c', ground: '#3b3d55', ground2: '#25263a', ray: 0.03 },
 };
-const WATER_KEYS = ['fresh', 'river', 'sea', 'jelly', 'brackish', 'deep'];
+const WATER_KEYS = ['fresh', 'river', 'sea', 'jelly', 'pool', 'brackish', 'deep'];
 
 const RARITY_APPEAL = [0, 3, 6, 12, 25, 60];
 const RARITY_PRICE  = [0, 60, 250, 1000, 4000, 18000];
 const RARITY_WEIGHT = [0, 50, 30, 14, 5, 1.2];
 const RARITY_BREED  = [0, 0.12, 0.08, 0.055, 0.035, 0.018];
 const RARITY_GROW   = [0, 90, 150, 240, 360, 600]; // 秒
+// 色違いの出る確率（ここを変えると調整できます）
+const SHINY_RATE = { base: 1 / 512, oneParent: 1 / 128, bothParents: 1 / 32, shop: 1 / 300 };
+// 大水槽
+const BIG = { rank: 4, costMult: 4, cap: 36, step: 12, max: 180 };
 
 // F(id, 名前, 水, レア度, 形, "体,腹,ヒレ,尾", 模様, 形オプション, 説明)
 function F(id, name, w, r, shape, cols, pat, o, desc) {
@@ -127,7 +133,7 @@ const SPECIES = [
   F('akaei', 'アカエイ', 'sea', 2, 'ray', '#a07050,#f0e0c0,#906040', [], { W: 20 }, '尾に毒のトゲを持つエイ。'),
   F('nemuri', 'ネムリブカ', 'sea', 3, 'shark', '#8a9098,#f0f0f0,#7a8088', [['finTip', '#ffffff']], {}, '昼間は岩陰で眠るサメ。'),
   F('torafu', 'トラフザメ', 'sea', 4, 'shark', '#d8c070,#f0e8c0,#c8b060', [['spots', '#3a2a1a', 0.2, 131]], { L: 32 }, 'ヒョウ柄のおとなしいサメ。'),
-  F('jinbe', 'ジンベエザメ', 'sea', 5, 'shark', '#3a5a8a,#e8f0f8,#2a4a7a', [['spots', '#e8f0ff', 0.2, 132], ['hlines', '#6a8ab8', 3, 0]], { L: 44, H: 12 }, '世界最大の魚。性格はとてもおだやか。'),
+  F('jinbe', 'ジンベエザメ', 'sea', 5, 'shark', '#3a5a8a,#e8f0f8,#2a4a7a', [['spots', '#e8f0ff', 0.2, 132], ['hlines', '#6a8ab8', 3, 0]], { L: 44, H: 12, bigOnly: true }, '世界最大の魚。性格はとてもおだやか。大水槽でしか飼えない。'),
   F('iwashi', 'マイワシ', 'sea', 1, 'slim', '#3a6ab8,#e8eef8,#5a7ab8', [['spots', '#1a2a5a', 0.06, 141]], { L: 13, H: 4 }, '大群で泳ぐ海の小魚。'),
   F('aji', 'マアジ', 'sea', 1, 'slim', '#7a9ab0,#e8ecf0,#c8c070', [['hstripe', '#e8d860', -0.05, 0.12, 0, 1]], { L: 15, H: 5 }, '側線にそって「ぜんご」というウロコがある。'),
   F('buri', 'ブリ', 'sea', 2, 'slim', '#3a6a9a,#e8e8f0,#c8c040', [['hstripe', '#ffe04a', -0.1, 0.1, 0, 1]], { L: 26, H: 7 }, '成長すると名前が変わる出世魚。'),
@@ -193,6 +199,30 @@ const SPECIES = [
   F('ginka', 'ギンカクラゲ', 'jelly', 3, 'jelly', '#e8eef8,#3a8aff,#2a6ae8', [['radial', '#c8d8f0', 18]], { bw: 12, bh: 3, bell: 'disc', tent: 16, tl: 5, tentMix: true }, '銀貨のような円盤と青い触手。'),
   F('kinchaku', 'キタユウレイクラゲ', 'jelly', 4, 'jelly', '#ffd8a0,#ffb070,#ffa060', [['gonad', '#e88040']], { bw: 20, bh: 9, tent: 30, tl: 20, arms: 14, armW: 3, alpha: 0.7 }, '北の海の巨大クラゲ。無数の触手を持つ。'),
   F('pinkjelly', 'カラージェリー(ピンク)', 'jelly', 1, 'jelly', '#ffc8e0,#ffe0f0,#ffb0d0', [['leaf', '#ff7ab0']], { bw: 13, bh: 6, bell: 'flat', tent: 12, tl: 4, arms: 5, armW: 1.5, alpha: 0.72 }, 'ライトアップで桃色に染まったミズクラゲ。'),
+
+  // ---------- 海獣プール（ペンギン・イルカ・カワウソなど） ----------
+  F('humboldt', 'フンボルトペンギン', 'pool', 2, 'penguin', '#2a2e3a,#ffffff,#2a2e3a', [['belly', '#ffffff', -0.15]], { stand: 'penguin', chestBand: 1, feet: '#e8a0a0', beak: '#2a2a2a' }, '日本の水族館でいちばん多いペンギン。胸に黒い帯が1本。'),
+  F('cape', 'ケープペンギン', 'pool', 2, 'penguin', '#1e222c,#ffffff,#1e222c', [['belly', '#ffffff', -0.15], ['spots', '#1e222c', 0.06, 201]], { stand: 'penguin', chestBand: 1, feet: '#2a2a2a', beak: '#2a2a2a' }, 'アフリカの海岸にすむペンギン。お腹に黒い点々。'),
+  F('gentoo', 'ジェンツーペンギン', 'pool', 3, 'penguin', '#2a2e3a,#ffffff,#2a2e3a', [['belly', '#ffffff', -0.15], ['band', '#ffffff', 0.78, 0.05, -1, -0.5]], { stand: 'penguin', feet: '#ff8a5a', beak: '#ff6a3a', headPatch: 1 }, '泳ぐのが速いペンギン。目の上に白い帯がある。'),
+  F('iwatobi', 'イワトビペンギン', 'pool', 3, 'penguin', '#2a2e3a,#ffffff,#2a2e3a', [['belly', '#ffffff', -0.15]], { stand: 'penguin', feet: '#ffb0a0', beak: '#e8503a', crest: '#ffd83a', L: 13 }, '黄色い飾り羽。岩場をぴょんぴょん跳ねて移動する。'),
+  F('king', 'キングペンギン', 'pool', 4, 'penguin', '#3a4250,#ffffff,#3a4250', [['belly', '#ffffff', -0.15], ['band', '#ffa830', 0.74, 0.06, -0.3, 0.5]], { stand: 'penguin', feet: '#2a2a2a', beak: '#2a2a2a', neck: '#ffa830', L: 18, H: 8 }, '2番目に大きいペンギン。首のオレンジ色が目印。'),
+  F('emperor', 'コウテイペンギン', 'pool', 5, 'penguin', '#2a2e3a,#ffffff,#2a2e3a', [['belly', '#ffffff', -0.15], ['band', '#ffe090', 0.74, 0.06, -0.3, 0.4]], { stand: 'penguin', feet: '#2a2a2a', beak: '#2a2a2a', neck: '#ffe090', L: 20, H: 9, standS: 1.25 }, '世界最大のペンギン。南極の冬に子育てをする。'),
+  F('fairy', 'コガタペンギン', 'pool', 2, 'penguin', '#4a7ab8,#ffffff,#4a7ab8', [['belly', '#ffffff', -0.15]], { stand: 'penguin', feet: '#f0e0e0', beak: '#2a2a2a', L: 11, H: 5, standS: 0.8 }, '世界最小のペンギン。背中が青い。'),
+  F('kotsume', 'コツメカワウソ', 'pool', 3, 'otter', '#8a6a4a,#e8d8c0,#7a5a3a,#8a6a4a', [['belly', '#e8d8c0', 0.2]], { stand: 'otter' }, '小さなツメが特徴。石遊びが大好き。'),
+  F('yurasia', 'ユーラシアカワウソ', 'pool', 4, 'otter', '#6a4a30,#d8c8a8,#5a3a20,#6a4a30', [['belly', '#d8c8a8', 0.2]], { stand: 'otter', L: 21, standS: 1.15 }, 'ヨーロッパからアジアに広くすむカワウソ。'),
+  F('rakko', 'ラッコ', 'pool', 5, 'seaotter', '#6a5040,#e0d0b8,#5a4030', [], {}, 'お腹の上で貝を割って食べる。水面にぷかぷか浮かぶ。'),
+  F('bando', 'バンドウイルカ', 'pool', 4, 'dolphin', '#7a8a9a,#e8ecf0,#6a7a8a,#6a7a8a', [], {}, 'イルカショーでおなじみ。とても頭がいい。'),
+  F('kamairuka', 'カマイルカ', 'pool', 3, 'dolphin', '#2a3040,#f0f0f0,#2a3040,#2a3040', [['hstripe', '#c8ccd8', -0.2, 0.3, 0.15, 0.6]], { L: 22, snout: 1 }, '鎌のような背びれ。ジャンプが得意。'),
+  F('sunameri', 'スナメリ', 'pool', 3, 'porpoise', '#a0a8b0,#c8ccd0,#909aa2,#909aa2', [], {}, '背びれのない小さなイルカ。笑っているような顔。'),
+  F('beluga', 'シロイルカ', 'pool', 4, 'whale', '#eef4f8,#ffffff,#dde8f0,#dde8f0', [], {}, 'ベルーガとも。頭のメロンで色々な音を出す。'),
+  F('shachi', 'シャチ', 'pool', 5, 'orca', '#16181e,#ffffff,#16181e,#16181e', [['band', '#ffffff', 0.72, 0.06, -0.65, -0.25], ['band', '#8a909a', 0.35, 0.07, -1, -0.62]], { bigOnly: true }, '海の王者。家族の群れで暮らす。大水槽でしか飼えない。'),
+  F('gomafu', 'ゴマフアザラシ', 'pool', 3, 'seal', '#c8c8c0,#e8e8e0,#a8a8a0,#a8a8a0', [['spots', '#4a4a4a', 0.12, 211]], {}, 'ゴマをふったような模様。赤ちゃんは真っ白。'),
+  F('zenigata', 'ゼニガタアザラシ', 'pool', 3, 'seal', '#5a5a5a,#8a8a88,#4a4a4a,#4a4a4a', [['spots', '#c8c8c0', 0.14, 212]], {}, '銭(コイン)のような輪っか模様。'),
+  F('ashika', 'カリフォルニアアシカ', 'pool', 3, 'seal', '#5a4030,#7a5a40,#4a3020,#4a3020', [], { L: 22 }, '前足で体を起こして歩ける。ショーの人気者。'),
+  F('ottosei', 'キタオットセイ', 'pool', 3, 'seal', '#3a3030,#6a5a50,#2a2020,#2a2020', [], { L: 18 }, 'ふかふかの毛皮を持つアシカの仲間。'),
+  F('seiuchi', 'セイウチ', 'pool', 5, 'seal', '#a87a5a,#c8987a,#986a4a,#986a4a', [], { L: 30, H: 12, tusks: true }, '長い牙を持つ北の海の巨体。'),
+  F('jugon', 'ジュゴン', 'pool', 5, 'manatee', '#9a8a80,#c8b8b0,#8a7a70,#8a7a70', [], { tail: 'fluke' }, '人魚のモデルといわれる。海草を食べる。'),
+  F('manatee', 'アメリカマナティー', 'pool', 4, 'manatee', '#7a7a78,#9a9a98,#6a6a68,#6a6a68', [], {}, 'しゃもじ形の尾を持つおだやかな海獣。'),
 ];
 
 const SPECIES_MAP = {};
@@ -220,6 +250,8 @@ const DECOR = [
   { id: 'ship',      name: '沈没船',      price: 3000, appeal: 25, kind: 'ship' },
   { id: 'spawnmat',  name: '産卵床',      price: 500,  appeal: 1,  kind: 'spawnmat', breed: 0.5 },
   { id: 'lamp',      name: '深海ランプ',  price: 700,  appeal: 8,  kind: 'lamp' },
+  { id: 'ice',       name: '流氷',        price: 400,  appeal: 6,  kind: 'ice' },
+  { id: 'ball',      name: 'ビーチボール', price: 250, appeal: 5,  kind: 'ball' },
 ];
 const DECOR_MAP = {};
 DECOR.forEach(d => DECOR_MAP[d.id] = d);

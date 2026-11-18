@@ -1,0 +1,16 @@
+{
+  "name": "ピクセル水族館",
+  "short_name": "ピクセル水族館",
+  "description": "ブラウザで遊べるドット絵の水族館運営ゲーム",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1f5a86",
+  "theme_color": "#1f5a86",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

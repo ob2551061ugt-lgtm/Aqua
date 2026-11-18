@@ -202,3 +202,18 @@ textarea { min-height: 70px; resize: vertical; word-break: break-all; }
   .logo { width: 34px; height: 34px; font-size: 20px; }
   .rank-title { font-size: 11px; }
 }
+
+/* ---------- 追加：一括操作・大水槽・注意表示 ---------- */
+.tank-card.big { grid-column: 1 / -1; }
+.tank-card.reordering { cursor: default; }
+.tank-card.reordering .tank-frame { opacity: .85; }
+.tank-head .mv { display: inline-flex; gap: 4px; margin-left: 4px; }
+.bulkbar { background: #fff; border: 3px solid var(--ink); border-radius: 10px; padding: 6px 8px; margin-bottom: 8px; font-size: 13px; }
+.bulkbar select { font-family: inherit; font-size: 13px; border: 2px solid var(--ink); border-radius: 6px; padding: 3px 4px; background: #fff; max-width: 220px; }
+.ck { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+input[type=checkbox] { width: 18px; height: 18px; accent-color: #3a8ae8; cursor: pointer; flex: none; }
+.fish-row.picked { background: #e2f0ff; }
+.box-item { cursor: pointer; }
+.warn { background: #ffe3dc; border: 3px solid #c8402a; border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; }
+.backup-nag { background: #fff3b0; }
+#hud { padding-top: max(8px, env(safe-area-inset-top)); }
